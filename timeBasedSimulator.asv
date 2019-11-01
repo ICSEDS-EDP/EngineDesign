@@ -22,8 +22,8 @@ P_cc=rocketDesign.P_cc;
 
 mdot_oxinit = rocketDesign.mdot_oxinit;
 mdot_ox = mdot_oxinit; %assumed constant throughout burn
-%m_ox = rocketDesign.m_ox;
-m_ox = 3;
+m_ox = rocketDesign.m_ox;
+
 A_exit = rocketDesign.A_exit;
 A_throat = rocketDesign.A_throat;
 expansionRatio = rocketDesign.expansionRatio;
@@ -51,9 +51,11 @@ AInjector2 = 0.25 * pi * (2e-3).^2; %Injector hole 2 cross section in m^3
 dischargeCoefficient1 = 0.8; %For injector orifice 1
 dischargeCoefficient2 = 0.8; %For injector orifice 2
 
+maxSimTime = 120; %120 sec
+
 %Change these parameters to alter the conditions of the tank
 initialInternalTankTemp = 27+273.15; %Starting tank temperature in kelvin
-initialInternalNitrousMass = 3; %Kg
+initialInternalNitrousMass = 6; %Kg
 internalTankHeight = 0.8; %Metres, very approximate geometry
 internalTankCrossSectionA = 0.25 * pi * (150e-3)^2; %M^2, very approximate geometry
 characteristicPipeLength = 0.5; %0.5m characteristic pipe length
@@ -72,28 +74,41 @@ qburnfin = 0; %parameter that determines whether the burn is completed or not (0
 t=0;
 ti=1; %time index
 
-while qburnfin == 0
-    %Get mass flow rate from tank
-    
-    PTank(ti) = tank.vapourPressure;
-
+%=========================================================================
+%i=0;
+%dt = 0.25; %sec
+%t(1) = 0;
+%while(tank.mLiquid > 0.01 && tank.vapourPressure > PDownstream && (i<1 || t(i) < maxSimTime))
+    i=i+1;
+    PTank(i) = tank.vapourPressure;
+    t(i) = dt.*(i-1);
     if(tank.vapourPressure <= PDownstream)
-        mdot1(ti) = 0;
-        mdot2(ti) = 0;
+        mdot1(i) = 0;
+        mdot2(i) = 0;
         continue;
     end
-    
     [~,~,~,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(0,tank.temp,tank.vapourPressure,PDownstream,0,characteristicPipeLength);
-    mdot1(ti) = G .* AInjector1 .* dischargeCoefficient1;
-    mdot2(ti) = G .* AInjector2 .* dischargeCoefficient2;
-    MTank(ti) = tank.mTotalNitrous;
-    MLiqTank(ti) = tank.mLiquid;
-    mdotTotal = mdot1(ti)+mdot2(ti);
+    mdot1(i) = G .* AInjector1 .* dischargeCoefficient1;
+    mdot2(i) = G .* AInjector2 .* dischargeCoefficient2;
+    MTank(i) = tank.mTotalNitrous;
+    MLiqTank(i) = tank.mLiquid;
+    mdotTotal = mdot1(i)+mdot2(i);
     h = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.PRESSURE,tank.vapourPressure,FluidProperty.VAPOR_QUALITY,0);
-    tank.changeNitrousMassEnergy(-mdotTotal.*deltaT,-h.*mdotTotal.*deltaT);
-    
-    mdot_ox = mdotTotal;
-    disp(mdot_ox)
+    tank.changeNitrousMassEnergy(-mdotTotal.*dt,-h.*mdotTotal.*dt);
+%     disp("mdot1: "+mdot1+"Kg/s");
+%     disp("mdot2: "+mdot2+"Kg/s");
+    disp("t="+t(i));
+%end
+
+
+%=======================================================================================
+
+
+
+
+
+while qburnfin == 0
+
 
     % 2. determine fuel regression rate & % 3. determine total mass flow rate
     
