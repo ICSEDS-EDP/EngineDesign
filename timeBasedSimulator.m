@@ -23,7 +23,7 @@ P_cc=rocketDesign.P_cc;
 mdot_oxinit = rocketDesign.mdot_oxinit;
 mdot_ox = mdot_oxinit; %assumed constant throughout burn
 %m_ox = rocketDesign.m_ox;
-m_ox = 3;
+m_ox = 6;
 A_exit = rocketDesign.A_exit;
 A_throat = rocketDesign.A_throat;
 expansionRatio = rocketDesign.expansionRatio;
@@ -53,7 +53,7 @@ dischargeCoefficient2 = 0.8; %For injector orifice 2
 
 %Change these parameters to alter the conditions of the tank
 initialInternalTankTemp = 27+273.15; %Starting tank temperature in kelvin
-initialInternalNitrousMass = 3; %Kg
+initialInternalNitrousMass = 6; %Kg
 internalTankHeight = 0.8; %Metres, very approximate geometry
 internalTankCrossSectionA = 0.25 * pi * (150e-3)^2; %M^2, very approximate geometry
 characteristicPipeLength = 0.5; %0.5m characteristic pipe length
@@ -72,10 +72,18 @@ qburnfin = 0; %parameter that determines whether the burn is completed or not (0
 t=0;
 ti=1; %time index
 
+P_cc(1) = 30e5;
+
 while qburnfin == 0
     %Get mass flow rate from tank
     
     PTank(ti) = tank.vapourPressure;
+    
+    if ti == 1
+        PDownstream = P_cc;
+    else
+        PDownstream = P_cc(ti-1);
+    end
 
     if(tank.vapourPressure <= PDownstream)
         mdot1(ti) = 0;
@@ -205,7 +213,11 @@ while qburnfin == 0
             qburnfin=1;
             disp('Fuel Web used up')
         else
-            qburnfin=0;
+            if tank.mLiquid <= 0.01
+                qburnfin=1;
+            else
+                qburnfin=0;
+            end
         end
     end
         
